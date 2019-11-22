@@ -1,8 +1,5 @@
 FROM alpine:3.10
 
-# LABEL maintainer="NGINX Docker Maintainers <docker-maint@nginx.com>"
-LABEL maintainer="Bohan Yang (Brent) <youthdna@live.com>"
-
 ARG NGINX_VERSION=1.14.2
 ARG GOOGLE_FILTER_MODULE_VERSION=5806afeffe0a773f70f6aa8ef509b9f118ef6c2c
 ARG SUBSTITUTIONS_FILTER_MODULE_VERSION=bc58cb11844bc42735bbaef7085ea86ace46d05b
@@ -160,7 +157,14 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
 # Copy all files inside nginx directory into /etc/nginx
 COPY nginx /etc/nginx/
 
-EXPOSE 80
+  # setup certificates
+RUN apk add --no-cache gnutls-utils \
+  && certtool --generate-privkey --outfile /etc/nginx/certs/ca-key.pem \
+  && certtool --generate-self-signed --load-privkey /etc/nginx/certs/ca-key.pem --template /etc/nginx/certs/ca-tmp --outfile /etc/nginx/certs/ca-cert.pem \
+  && certtool --generate-privkey --outfile /etc/nginx/certs/server-key.pem \
+  && certtool --generate-certificate --load-privkey /etc/nginx/certs/server-key.pem --load-ca-certificate /etc/nginx/certs/ca-cert.pem --load-ca-privkey /etc/nginx/certs/ca-key.pem --template /etc/nginx/certs/serv-tmp --outfile /etc/nginx/certs/server-cert.pem
+
+EXPOSE 80 443
 
 STOPSIGNAL SIGTERM
 
